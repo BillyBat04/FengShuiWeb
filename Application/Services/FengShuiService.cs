@@ -403,5 +403,22 @@ namespace FengShuiWeb.Application.Services
                 return $"Lỗi khi gọi Gemini API: {ex.Message}";
             }
         }
+        public async Task<List<FengShuiAnalysisDto>> SearchAnalysesAsync(int userId, SearchAnalysisDto searchDto)
+        {
+            var user = await _userRepository.GetByIdAsync(userId);
+            if (user == null)
+            {
+                throw new Exception("Người dùng không tồn tại");
+            }
+
+            var analyses = await _analysisRepository.GetByUserIdAsync(userId);
+            var filteredAnalyses = analyses.Where(a =>
+                (string.IsNullOrEmpty(searchDto.Label) || a.Label.Contains(searchDto.Label)) &&
+                (searchDto.DateFrom == null || a.CreatedAt >= searchDto.DateFrom) &&
+                (searchDto.DateTo == null || a.CreatedAt <= searchDto.DateTo)
+            ).ToList();
+
+            return _mapper.Map<List<FengShuiAnalysisDto>>(filteredAnalyses);
+        }
     }
 }
