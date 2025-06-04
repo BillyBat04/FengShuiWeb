@@ -12,3 +12,5 @@ obj/
 # Others
 *.log
 *.vsidx
+
+.env
