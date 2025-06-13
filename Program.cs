@@ -14,6 +14,7 @@ using FengShuiWeb.Infrastructure;
 using System.Text;
 using Microsoft.AspNetCore.Identity;
 using FengShuiWeb.Infrastructure.DataProviders;
+using Microsoft.AspNetCore.Authentication.Cookies;
 
 Env.Load(); 
 var builder = WebApplication.CreateBuilder(args);
@@ -37,6 +38,7 @@ builder.Services.AddAuthentication(options =>
 {
     options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
     options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultSignInScheme = CookieAuthenticationDefaults.AuthenticationScheme; // Thêm DefaultSignInScheme
 })
 .AddJwtBearer(options =>
 {
@@ -55,6 +57,7 @@ builder.Services.AddAuthentication(options =>
 {
     options.ClientId = builder.Configuration["Authentication:Google:ClientId"];
     options.ClientSecret = builder.Configuration["Authentication:Google:ClientSecret"];
+    options.CallbackPath = "/signin-google"; 
 })
 .AddFacebook(options =>
 {
@@ -76,6 +79,8 @@ builder.Services.AddScoped<IFengShuiAnalysisRepository, FengShuiAnalysisReposito
 builder.Services.AddScoped<IArticleRepository, ArticleRepository>();
 builder.Services.AddScoped<IPasswordHasher<FengShuiWeb.Domain.Models.User>, PasswordHasher<FengShuiWeb.Domain.Models.User>>();
 builder.Services.AddScoped<FengShuiDataProvider>();
+builder.Services.AddSingleton<JwtService>();
+builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("Jwt"));
 
 
 builder.Services.AddControllers();
