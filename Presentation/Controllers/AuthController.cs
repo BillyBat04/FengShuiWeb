@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Authentication.Facebook;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using System.Security.Authentication;
+using FengShuiWeb.Application.Services;
 
 namespace FengShuiWeb.Presentation.Controllers
 {
@@ -19,6 +20,7 @@ namespace FengShuiWeb.Presentation.Controllers
     {
         private readonly IAuthService _authService;
         private readonly IEmailService _emailService;
+        private readonly JwtService _jwtService;
 
         public AuthController(IAuthService authService, IEmailService emailService)
         {
@@ -165,33 +167,25 @@ namespace FengShuiWeb.Presentation.Controllers
         {
             var properties = new AuthenticationProperties
             {
-                RedirectUri = Url.Action(nameof(GoogleCallback))
+                RedirectUri = Url.Action(nameof(SigninGoogle))
             };
             return Challenge(properties, GoogleDefaults.AuthenticationScheme);
         }
 
-        [HttpGet("google-callback")]
-        public async Task<IActionResult> GoogleCallback()
+        [HttpGet("signin-google")]
+        public async Task<IActionResult> SigninGoogle()
         {
-            try
-            {
-                var authenticateResult = await HttpContext.AuthenticateAsync(CookieAuthenticationDefaults.AuthenticationScheme);
-                if (!authenticateResult.Succeeded)
-                    return Unauthorized(new { Message = "Xác thực Google thất bại" });
+            var result = await HttpContext.AuthenticateAsync(GoogleDefaults.AuthenticationScheme);
+            if (!result.Succeeded)
+                return BadRequest(result.Failure?.Message);
 
-                var email = authenticateResult.Principal.FindFirst(ClaimTypes.Email)?.Value;
-                var name = authenticateResult.Principal.FindFirst(ClaimTypes.Name)?.Value;
+            var claims = result.Principal.Identities.FirstOrDefault()?.Claims;
+            var userId = 1; 
+            var email = claims.FirstOrDefault(c => c.Type == ClaimTypes.Email)?.Value;
+            var role = "User"; 
 
-                if (string.IsNullOrEmpty(email) || string.IsNullOrEmpty(name))
-                    return BadRequest(new { Message = "Không thể lấy thông tin từ Google" });
-
-                var response = await _authService.HandleGoogleLoginAsync(email, name);
-                return Ok(response);
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { Message = "Đã xảy ra lỗi khi xử lý đăng nhập Google", Error = ex.Message });
-            }
+            var token = _jwtService.GenerateJwtToken(userId, email, role);
+            return Ok(new { AccessToken = token });
         }
 
         [HttpGet("facebook")]
